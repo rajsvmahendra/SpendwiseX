@@ -721,6 +721,5 @@ Special thanks to:
 
 **Built with intention. Designed with care.**
 
-[⬆ Back to Top](#spendwise-x)
 
 </div>
