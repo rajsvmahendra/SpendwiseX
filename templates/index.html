@@ -1,53 +1,452 @@
+<!--
+    ═══════════════════════════════════════════════════════════════
+    SpendWise — Dashboard
+    ═══════════════════════════════════════════════════════════════
+
+    STRUCTURE:
+      The dashboard is designed as a vertical narrative of five
+      questions a real user asks about their money, in order.
+
+      Q1 — Where do I stand today?         [greeting + ring]
+      Q2 — What changed?                    [week comparison]
+      Q3 — What deserves my attention?      [dynamic insights]
+      Q4 — Where is my money going?         [top categories]
+      Q5 — What pattern haven't I noticed?  [constellation]
+
+    IDENTITY MARKERS (why this is SpendWise):
+      - Question-based section titles
+      - ✦ sparkle glyph for genuine positive moments
+      - Text-first sentences, not stat cards
+      - Health ring stands alone, no card wrapping
+      - Constellation as final reward, not the opening act
+
+    NO CARDS. NO GRIDS. NO REPEATING RECTANGLES.
+    Hierarchy is created by size, spacing, and typography.
+    ═══════════════════════════════════════════════════════════════
+-->
 {% extends "base.html" %}
 
-{% block title %}SpendWise | Dashboard{% endblock %}
+{% block title %}SpendWise{% endblock %}
 
 {% block content %}
 
-<section class="hero">
-    <h2>Welcome to SpendWise</h2>
-    <p>Track your expenses, analyze your spending, and make smarter financial decisions.</p>
-</section>
+<div class="dashboard">
 
-<!-- Quick Stats -->
-<section>
-    <div class="stats-grid" id="statsGrid">
-        <div class="stat-card">
-            <span class="stat-label">Total Spent</span>
-            <span class="stat-value" id="statTotal">—</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">This Month</span>
-            <span class="stat-value" id="statMonth">—</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Transactions</span>
-            <span class="stat-value" id="statCount">—</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-label">Top Category</span>
-            <span class="stat-value" id="statTop">—</span>
-        </div>
-    </div>
-</section>
 
-<!-- Charts -->
-<section>
-    <div id="dataContainer">
-        <div id="lineGraphContainer">
-            <div class="chart-header">
-                <div>
-                    <span class="chart-title">Monthly Spending</span>
-                    <span class="chart-subtitle" id="chartSubtitle">Loading...</span>
-                </div>
+    <!--
+        ═══════════════════════════════════════════════════════════
+        Q1 — WHERE DO I STAND TODAY?
+        ═══════════════════════════════════════════════════════════
+        Purpose: Immediate grounding. User sees name + status
+                 within the first 2 seconds of page load.
+
+        Visual weight: MAXIMUM.
+        Layout: Text on left, ring floating on right.
+                No borders. No cards. Just presence.
+
+        Reward hook: A ✦ streak badge appears BELOW the greeting
+                     ONLY when the user has earned it.
+                     If not earned, badge is invisible (no fake positivity).
+    -->
+    <section class="q-standing" id="qStanding">
+
+        <!--
+        Atmospheric composition layers.
+        Purely decorative. Purely CSS.
+        Positioned absolutely behind content.
+    -->
+        <!-- <div class="aurora-streak" aria-hidden="true"></div>
+        <div class="ambient-emerald" aria-hidden="true"></div>
+        <div class="ambient-cyan" aria-hidden="true"></div> -->
+
+        <div class="q-standing-text">
+            <h1 class="greeting" id="heroGreeting">
+                Good evening.
+            </h1>
+
+            <p class="greeting-sentence">
+                You've spent
+                <span class="greeting-amount font-mono" id="greetingAmount">₹0</span>
+                <span class="greeting-period">this month.</span>
+            </p>
+
+            <p class="greeting-projection" id="greetingProjection">
+                <!-- Populated by JS -->
+            </p>
+
+            <!--
+                REWARD BADGE — only rendered when there's something
+                genuinely positive to say. JS decides whether to
+                populate + show this element.
+            -->
+            <div class="reward-badge" id="rewardBadge" hidden>
+                <span class="reward-spark">✦</span>
+                <span class="reward-text" id="rewardText"></span>
             </div>
-            <canvas id="monthlySpendingChart"></canvas>
         </div>
 
-        <div id="pieChartContainer">
-            <canvas id="allTimeCategoriesChart"></canvas>
+        <div class="q-standing-ring">
+            <!--
+                Health ring — standalone, no card wrapping.
+                Interactive: hover on desktop, tap on mobile,
+                keyboard focus supported.
+
+                tabindex="0" makes it focusable via Tab key.
+                role="button" tells screen readers it's interactive.
+                aria-label describes what happens on activation.
+            -->
+            <div class="health-ring-standalone" id="healthRingContainer" tabindex="0" role="button"
+                aria-label="Show health score details">
+
+                <svg class="health-ring-svg" width="180" height="180" viewBox="0 0 180 180">
+                    <circle class="health-ring-track" cx="90" cy="90" r="76" fill="none" stroke-width="10" />
+                    <circle class="health-ring-fill" id="healthRingFill" cx="90" cy="90" r="76" fill="none"
+                        stroke-width="10" stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5" />
+                </svg>
+
+                <div class="health-ring-center">
+                    <div class="health-ring-value" id="healthScoreValue">—</div>
+                    <div class="health-ring-label" id="healthScoreLabel">Loading</div>
+                </div>
+
+            </div>
         </div>
+
+    </section>
+
+
+    <!--
+        ═════════════════════════════════════════════════════════
+        RING CONTEXT PANEL
+        ═════════════════════════════════════════════════════════
+
+        Contextual whisper, not widget.
+
+        Positioned via JS to appear adjacent to the health ring
+        with intelligent placement (left, right, above, below)
+        based on available viewport space.
+
+        Placed OUTSIDE .q-standing so overflow:hidden doesn't
+        clip it. JS uses position:fixed to place it anywhere
+        on screen relative to the ring's current location.
+
+        Content:
+          - Score summary in header
+          - 3 human-language reasons (why is my score this?)
+          - 1 next-step sentence (what should I do?)
+
+        No progress bars. No mini-dashboard.
+        Just contextual explanation.
+    -->
+    <div class="ring-context" id="ringContext" hidden role="tooltip">
+
+        <div class="ring-context-header">
+            <span class="ring-context-score" id="ringContextScore">Health Score: —</span>
+        </div>
+
+        <div class="ring-context-section">
+            <div class="ring-context-label">Why?</div>
+            <ul class="ring-context-reasons" id="ringContextReasons">
+                <!--
+                    Populated by JS.
+                    Each <li> shows one plain-English reason.
+                    Order: worst-performing factors first.
+                -->
+            </ul>
+        </div>
+
+        <div class="ring-context-section">
+            <div class="ring-context-label">Next step</div>
+            <p class="ring-context-nextstep" id="ringContextNextStep">—</p>
+        </div>
+
     </div>
-</section>
+
+
+    <!--
+        Divider — a horizontal line with generous margin.
+        Not decorative. Signals "this question is answered.
+        Time for the next one."
+    -->
+    <hr class="q-divider">
+
+    <!--
+        ═══════════════════════════════════════════════════════════
+        Q2 — WHAT CHANGED?
+        ═══════════════════════════════════════════════════════════
+        Purpose: Directional awareness. Users don't just want
+                 current state — they want to know if they're
+                 improving or getting worse.
+
+        Visual weight: HIGH.
+        Layout: Two sparklines side by side. Compact, informative.
+
+        Interaction:
+          - Hover a sparkline bar → shows that day's total
+          - Click the expand link → inline detail reveals which
+            categories drove the change
+    -->
+    <section class="q-changed" id="qChanged">
+
+        <div class="q-header">
+            <h2 class="q-title">What changed?</h2>
+            <p class="q-sub">This week compared to last week.</p>
+        </div>
+
+        <div class="week-compare">
+
+            <div class="week-block">
+                <div class="week-label">This week</div>
+                <div class="week-spark" id="weekSparkThis">
+                    <!-- Bars populated by JS -->
+                </div>
+                <div class="week-total font-mono" id="weekTotalThis">₹0</div>
+            </div>
+
+            <div class="week-delta" id="weekDelta">
+                <div class="week-delta-arrow" id="weekDeltaArrow">→</div>
+                <div class="week-delta-amount font-mono" id="weekDeltaAmount">—</div>
+                <div class="week-delta-label" id="weekDeltaLabel">no change</div>
+            </div>
+
+            <div class="week-block">
+                <div class="week-label">Last week</div>
+                <div class="week-spark" id="weekSparkLast">
+                    <!-- Bars populated by JS -->
+                </div>
+                <div class="week-total font-mono" id="weekTotalLast">₹0</div>
+            </div>
+
+        </div>
+
+        <p class="week-conclusion" id="weekConclusion">
+            <!-- e.g. "Restaurants are your fastest-growing category." -->
+        </p>
+
+    </section>
+
+
+    <hr class="q-divider">
+
+
+    <!--
+        ═══════════════════════════════════════════════════════════
+        Q3 — WHAT DESERVES MY ATTENTION?
+        ═══════════════════════════════════════════════════════════
+        Purpose: Actionable focus. Show max 3 items, prioritized
+                 anomalies > warnings > positive reinforcement.
+
+        Visual weight: HIGH — but quiet.
+        Layout: Vertical list. No cards. Text-dominant.
+
+        Reward hook: Positive insights end with a ✦
+                     Users associate this glyph with wins.
+    -->
+    <section class="q-attention" id="qAttention">
+
+        <div class="q-header">
+            <h2 class="q-title">What deserves your attention?</h2>
+            <p class="q-sub">The things I'd want you to know today.</p>
+        </div>
+
+        <div class="attention-list" id="attentionList">
+            <!--
+                Populated by JS. Each item follows this structure:
+
+                <div class="attention-item [type]">
+                    <span class="attention-dot"></span>
+                    <div class="attention-body">
+                        <p class="attention-fact">
+                            Bold headline.
+                            <span class="attention-spark">✦</span>  <-- only if positive
+                        </p>
+                        <p class="attention-context">Muted context sentence.</p>
+                        <a class="attention-action" href="...">Action link →</a>
+                    </div>
+                </div>
+            -->
+        </div>
+
+    </section>
+
+
+    <hr class="q-divider">
+
+
+    <!--
+        ═══════════════════════════════════════════════════════════
+        Q4 — WHERE IS MY MONEY GOING?
+        ═══════════════════════════════════════════════════════════
+        Purpose: Breakdown by category. Preparation for exploration.
+
+        Visual weight: MEDIUM.
+        Layout: Simple vertical list of category rows with bars.
+
+        Interaction:
+          - Hover a category row → floating preview appears on the
+            right showing the 3 most recent expenses in that category
+          - Click a category → filters the constellation below
+                              (constellation is next section)
+    -->
+    <section class="q-categories" id="qCategories">
+
+        <div class="q-header">
+            <h2 class="q-title">Where is your money going?</h2>
+            <p class="q-sub">Your top spending this month. Hover to see recent entries.</p>
+        </div>
+
+        <div class="category-list" id="categoryList">
+            <!--
+                Populated by JS. Each row structure:
+
+                <div class="category-row" data-category="Restaurants">
+                    <span class="category-name">Restaurants</span>
+                    <span class="category-bar">
+                        <span class="category-fill" style="width: 34%; background: ..."></span>
+                    </span>
+                    <span class="category-amount font-mono">₹4,250</span>
+                    <span class="category-pct">34%</span>
+                </div>
+            -->
+        </div>
+
+        <!--
+            Floating hover preview — absolutely positioned,
+            appears next to hovered category row.
+            Populated + positioned by JS.
+        -->
+        <div class="category-preview" id="categoryPreview" hidden>
+            <div class="category-preview-header" id="categoryPreviewHeader"></div>
+            <div class="category-preview-list" id="categoryPreviewList"></div>
+        </div>
+
+    </section>
+
+
+    <hr class="q-divider q-divider-lg">
+
+
+    <!--
+        ═══════════════════════════════════════════════════════════
+        Q5 — WHAT PATTERN HAVEN'T YOU NOTICED?  ✦ THE CONSTELLATION
+        ═══════════════════════════════════════════════════════════
+        Purpose: The reward. The signature feature. The reason
+                 someone screenshots SpendWise and shares it.
+
+        Visual weight: FULL PAGE MOMENT.
+        Layout: Wide canvas. Generous space above. Understated title.
+
+        This section is intentionally placed LAST.
+        The user has already gotten value from Q1-Q4.
+        The constellation is the payoff for engagement.
+
+        The full canvas implementation lives in a dedicated
+        constellation.js file (Step 4 of the build).
+
+        This HTML only creates the container + filter chips.
+        JS renders everything inside #constellationCanvas.
+    -->
+    <section class="q-constellation" id="qConstellation">
+
+        <div class="constellation-header">
+            <div class="constellation-title-marks">✦ ✦ ✦</div>
+            <h2 class="constellation-title" id="constellationTitle">
+                Your November spending map
+            </h2>
+            <p class="constellation-sub">
+                Each star is one expense. Size shows how much. Color shows what.
+                Hover to see the story. Filter to see the shape of your habits.
+            </p>
+        </div>
+
+        <!--
+            Filter chips. "All" is always present.
+            Category chips are added by JS based on real data.
+            Clicking a chip smoothly animates the canvas.
+        -->
+        <div class="constellation-filters" id="constellationFilters">
+            <button class="constellation-chip active" data-filter="all">All</button>
+            <!-- Category chips injected by JS -->
+        </div>
+
+        <!--
+            The canvas element the constellation renders into.
+            Fixed aspect ratio. Fills its container width.
+        -->
+        <div class="constellation-stage" id="constellationStage">
+            <canvas id="constellationCanvas"></canvas>
+
+            <!--
+                Axis labels. Sit outside the canvas as HTML
+                for accessibility and easier positioning.
+            -->
+            <div class="constellation-axis-x">
+                <span class="axis-label-left" id="axisLabelStart">Nov 1</span>
+                <span class="axis-label-right" id="axisLabelEnd">Nov 24</span>
+            </div>
+
+            <!--
+                Tooltip that follows the cursor when hovering a star.
+                Positioned by JS. Hidden by default.
+            -->
+            <div class="constellation-tooltip" id="constellationTooltip" hidden>
+                <div class="tooltip-business" id="tooltipBusiness"></div>
+                <div class="tooltip-meta">
+                    <span class="tooltip-amount font-mono" id="tooltipAmount"></span>
+                    <span class="tooltip-separator">·</span>
+                    <span class="tooltip-category" id="tooltipCategory"></span>
+                </div>
+                <div class="tooltip-time" id="tooltipTime"></div>
+                <div class="tooltip-note" id="tooltipNote" hidden></div>
+            </div>
+
+            <!--
+                Expanded star card. When a star is clicked, it
+                "grows" into this card. Positioned over the canvas.
+                Hidden by default.
+            -->
+            <div class="constellation-expanded" id="constellationExpanded" hidden>
+                <button class="expanded-close" id="expandedClose" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <div class="expanded-header">
+                    <div class="expanded-category-dot" id="expandedDot"></div>
+                    <div class="expanded-business" id="expandedBusiness"></div>
+                </div>
+                <div class="expanded-amount font-mono" id="expandedAmount"></div>
+                <div class="expanded-meta">
+                    <span id="expandedCategory"></span>
+                    <span class="tooltip-separator">·</span>
+                    <span id="expandedDate"></span>
+                </div>
+                <div class="expanded-note" id="expandedNote" hidden></div>
+            </div>
+        </div>
+
+        <p class="constellation-hint" id="constellationHint">
+            <!-- e.g. "Notice how Saturdays cluster together?" -->
+        </p>
+
+    </section>
+
+
+</div>
 
 {% endblock %}
+
+
+{#
+Chart.js is intentionally NOT loaded on this page.
+The dashboard uses SVG for the ring, DOM bars for sparklines,
+and Canvas for the constellation. Zero chart library needed.
+
+This is a deliberate performance win — the dashboard is
+the most-visited page and now loads without a 250KB dependency.
+
+Chart.js remains loaded on the Insights page where it's needed.
+#}
+{% block extra_js %}{% endblock %}

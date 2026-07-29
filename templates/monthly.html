@@ -1,37 +1,121 @@
+<!--
+    monthly.html — Insights Page (Analytics)
+    ═══════════════════════════════════════════════════════════
+
+    Identity: The "analysis" section of your financial diary.
+    Typography: Playfair Display for headings, Caveat for
+    descriptive text, JetBrains Mono for numbers.
+
+    Sections:
+      1. Page header
+      2. Summary stat cards
+      3. Cash Flow Forecast card
+      4. Category breakdown bars
+      5. Monthly breakdown cards with pie charts
+
+    API calls:
+      /api/monthly-totals
+      /api/category-totals
+      /api/category-totals?month=YYYY-MM
+      /api/insights/forecast
+═══════════════════════════════════════════════════════════ -->
 {% extends "base.html" %}
 
-{% block title %}SpendWise | Analytics{% endblock %}
+{% block title %}SpendWise | Insights{% endblock %}
 
 {% block content %}
 
+<!-- ── Page Header ──────────────────────────────────────── -->
 <section class="page-header">
-    <h2>Analytics</h2>
-    <p>Understand your spending patterns and monthly breakdown.</p>
+    <h2>Your Financial Insights</h2>
+    <p>Patterns, predictions, and the story your spending tells.</p>
 </section>
 
-<!-- Summary strip -->
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 1 — Summary Stats
+────────────────────────────────────────────────────────── -->
 <section>
-    <div class="stats-grid" id="analyticsSummary">
+    <div class="stats-grid analytics-summary-grid" id="analyticsSummary">
+
         <div class="stat-card">
             <span class="stat-label">Highest Month</span>
             <span class="stat-value" id="statHighestMonth">—</span>
             <span class="stat-sub" id="statHighestMonthAmount"></span>
         </div>
+
         <div class="stat-card">
             <span class="stat-label">Top Category</span>
             <span class="stat-value" id="statTopCategory">—</span>
             <span class="stat-sub" id="statTopCategoryAmount"></span>
         </div>
+
         <div class="stat-card">
             <span class="stat-label">Average / Month</span>
             <span class="stat-value" id="statAverage">—</span>
             <span class="stat-sub">across all months</span>
         </div>
+
     </div>
 </section>
 
-<!-- Category breakdown bar chart -->
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 2 — Cash Flow Forecast
+────────────────────────────────────────────────────────── -->
+<section id="forecastSection">
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="display:inline; vertical-align:-2px; margin-right:6px; color:var(--accent);">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        What Lies Ahead
+    </h3>
+
+    <div class="analytics-card" id="forecastCard">
+
+        <!-- Forecast header -->
+        <div class="forecast-header">
+            <div>
+                <div class="chart-title" id="forecastMonthLabel">Next Month</div>
+                <div class="chart-subtitle font-mono" id="forecastTotal">—</div>
+            </div>
+            <div class="forecast-meta">
+                <span class="weekly-strip-delta neutral" id="forecastTrend">—</span>
+                <span class="forecast-confidence" id="forecastConfidence">—</span>
+            </div>
+        </div>
+
+        <!-- Forecast note (handwritten style) -->
+        <div class="forecast-note-wrapper">
+            <p class="forecast-handwritten" id="forecastNote">
+                Analyzing your spending patterns...
+            </p>
+        </div>
+
+        <!-- Per-category forecast bars -->
+        <div id="forecastBreakdown" class="category-breakdown"></div>
+
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 3 — Category Breakdown
+────────────────────────────────────────────────────────── -->
 <section>
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="display:inline; vertical-align:-2px; margin-right:6px; color:var(--rose);">
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+        Where Your Money Goes
+    </h3>
+
     <div class="analytics-card">
         <div class="chart-header">
             <div>
@@ -43,10 +127,29 @@
     </div>
 </section>
 
-<!-- Monthly cards -->
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 4 — Monthly Breakdown Cards
+────────────────────────────────────────────────────────── -->
 <section>
-    <h3 class="section-title">Monthly Breakdown</h3>
+    <h3 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            style="display:inline; vertical-align:-2px; margin-right:6px; color:var(--accent);">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        Month by Month
+    </h3>
     <div id="monthlyOverview"></div>
 </section>
 
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 {% endblock %}

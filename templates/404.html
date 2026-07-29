@@ -1,0 +1,41 @@
+<!--
+    404.html — Page Not Found
+    ═══════════════════════════════════════════════════════════
+    Displayed when a user navigates to a non-existent page.
+    Flask errorhandler(404) renders this for non-API routes.
+    API routes return JSON { "error": "Endpoint not found." }
+═══════════════════════════════════════════════════════════ -->
+{% extends "base.html" %}
+
+{% block title %}SpendWise | Not Found{% endblock %}
+
+{% block content %}
+
+<section style="text-align:center; padding:var(--space-16) var(--space-6);">
+
+    <div class="empty-state-icon" style="margin:0 auto var(--space-5); width:64px; height:64px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M16 16s-1.5-2-4-2-4 2-4 2" />
+            <line x1="9" y1="9" x2="9.01" y2="9" />
+            <line x1="15" y1="9" x2="15.01" y2="9" />
+        </svg>
+    </div>
+
+    <h2 style="font-size:1.5rem; font-weight:800; margin-bottom:var(--space-2); letter-spacing:-0.03em;">
+        Page not found
+    </h2>
+
+    <p
+        style="color:var(--text-secondary); font-size:0.95rem; margin-bottom:var(--space-6); max-width:400px; margin-left:auto; margin-right:auto;">
+        The page you are looking for does not exist or has been moved.
+    </p>
+
+    <a href="{{ url_for('home') }}" class="btn-primary" style="display:inline-block; width:auto; padding:12px 28px;">
+        Back to Dashboard
+    </a>
+
+</section>
+
+{% endblock %}

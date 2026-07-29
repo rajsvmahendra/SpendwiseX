@@ -1,91 +1,350 @@
+<!--
+    ═══════════════════════════════════════════════════════════════
+    SpendWise — Write Page ("Capture a moment")
+    ═══════════════════════════════════════════════════════════════
+
+    DESIGN PRINCIPLES:
+      1. Fastest way to add an expense = most beautiful way.
+      2. AI is invisible. It just works.
+      3. Manual form is a natural continuation, not a fallback.
+      4. Save should feel satisfying — like filing something away.
+      5. Speed rewards more speed (flow mode).
+
+    STRUCTURE:
+      - Single centered input as the hero
+      - Rotating placeholder for guidance
+      - Contextual footer showing today's activity
+      - Receipt card materializes below input after AI parse
+      - Card transforms into editable form when needed
+      - Full-page drop zone for receipts (showcase-only in v1)
+
+    IDENTITY MARKERS (why this is SpendWise):
+      - No "AI" branding anywhere
+      - Live syntax highlighting on numbers and dates
+      - @ triggers merchant suggestions from your own history
+      - Apple Wallet–style receipt card
+      - "Filed away" save animation
+      - Flow mode for rapid consecutive entries
+    ═══════════════════════════════════════════════════════════════
+-->
 {% extends "base.html" %}
 
-{% block title %}SpendWise | Add Expense{% endblock %}
+{% block title %}SpendWise{% endblock %}
 
 {% block content %}
 
-<section class="page-header">
-    <h2>Add New Expense</h2>
-    <p>Log a purchase to keep your records up to date.</p>
-</section>
+<!--
+    The .write-page container defines the vertical rhythm
+    of the entire experience. It's centered horizontally
+    but pushed slightly above vertical center so the input
+    lives in the natural eye-line, not literal middle.
+-->
+<div class="write-page">
 
-<form id="purchaseForm" enctype="multipart/form-data" autocomplete="off" class="expense-form">
 
-    <!-- Row 1: Date + Amount -->
-    <div class="form-row">
-        <div class="form-field">
-            <label for="date">Date</label>
-            <input type="date" id="date" name="date" required>
+    <!--
+        ═════════════════════════════════════════════════════════
+        THE HERO — Input + Prompt
+        ═════════════════════════════════════════════════════════
+
+        The single most important element on the page.
+        Everything else is subordinate.
+
+        The input is intentionally not wrapped in <form> at this
+        level because we want fine-grained control over Enter key
+        behavior (Enter = save current card, not submit input).
+    -->
+    <section class="write-hero" id="writeHero">
+
+        <h1 class="write-prompt">What did you spend on?</h1>
+
+        <!--
+            The input wrapper contains three layers stacked:
+              1. .write-input-highlight — visible syntax layer (behind)
+              2. .write-input           — actual text input (invisible bg)
+              3. Currency symbol prefix — floating inside on left
+
+            The highlight layer mirrors the input's content
+            with colored spans wrapped around numbers and dates.
+            This creates the "live syntax highlighting" effect
+            without interfering with typing.
+        -->
+        <div class="write-input-wrap" id="writeInputWrap">
+            <span class="write-input-currency">₹</span>
+            <input type="text" id="writeInput" class="write-input" autocomplete="off" spellcheck="false"
+                autocapitalize="off" aria-label="Describe your expense" placeholder='like "500 at zomato yesterday"'>
         </div>
 
-        <div class="form-field">
-            <label for="amount">Amount</label>
-            <div class="input-with-prefix">
-                <span class="prefix">₹</span>
-                <input type="number" id="amount" name="amount"
-                       step="0.01" placeholder="0.00" required>
+        <!--
+    Token chips — show recognized entities as user types.
+    Populated by JS: amount, merchant, date, category.
+    Appears only when at least one token is detected.
+-->
+        <div class="write-tokens" id="writeTokens" hidden></div>
+
+
+        <!--
+            @ trigger suggestions panel.
+            Appears below the input when user types @.
+            Populated dynamically by JS with recent merchants.
+        -->
+        <div class="write-suggestions" id="writeSuggestions" hidden>
+            <div class="suggestions-label" id="suggestionsLabel">Recent merchants</div>
+            <div class="suggestions-list" id="suggestionsList"></div>
+        </div>
+
+        <!--
+            Small link to open manual form directly.
+            Visible only when input is empty.
+        -->
+        <button type="button" class="write-manual-link" id="writeManualLink">
+            or add details manually
+        </button>
+
+    </section>
+
+
+    <!--
+        ═════════════════════════════════════════════════════════
+        THE RECEIPT CARD — Appears after AI parse
+        ═════════════════════════════════════════════════════════
+
+        Hidden by default. Populated by JS after successful parse.
+        Two visual modes:
+          - Receipt view (default): Apple Wallet-style summary
+          - Edit view: same rectangle, fields inside
+
+        The card also handles OCR-showcase state — when a file
+        is dropped/uploaded, the card appears with the image
+        thumbnail and edit fields ready.
+    -->
+    <section class="write-card-wrap" id="writeCardWrap" hidden>
+
+        <div class="write-card" id="writeCard">
+
+            <!--
+                Uploaded receipt thumbnail — only visible when
+                a file has been attached. Sits above the card content.
+            -->
+            <div class="write-card-receipt" id="writeCardReceipt" hidden>
+                <img id="writeCardReceiptImg" alt="Uploaded receipt">
+                <button type="button" class="receipt-remove" id="receiptRemove" aria-label="Remove receipt">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
             </div>
-        </div>
-    </div>
 
-    <!-- Business -->
-    <div class="form-field">
-        <label for="business">Where did you spend?</label>
-        <input type="text" id="business" name="business"
-               placeholder="e.g. Reliance Fresh, Zomato, Uber" required>
-    </div>
+            <!-- ── RECEIPT VIEW (default) ──────────────────── -->
+            <div class="write-card-view" id="writeCardView">
 
-    <!-- Category as pills -->
-    <div class="form-field">
-        <label>Category</label>
+                <div class="card-merchant" id="cardMerchant">MERCHANT</div>
+                <div class="card-category" id="cardCategory">Category</div>
 
-        <div class="category-grid" id="categoryGrid">
-            <button type="button" class="category-pill" data-category="Groceries">Groceries</button>
-            <button type="button" class="category-pill" data-category="Restaurants">Restaurants</button>
-            <button type="button" class="category-pill" data-category="Gas/Car">Gas / Car</button>
-            <button type="button" class="category-pill" data-category="Clothes">Clothes</button>
-            <button type="button" class="category-pill" data-category="Furniture/Home">Food</button>
-            <button type="button" class="category-pill" data-category="School/Office Supplies">School / Office</button>
-            <button type="button" class="category-pill" data-category="Misc">Misc</button>
-            <button type="button" class="category-pill" data-category="__other__">Other</button>
-        </div>
+                <div class="card-amount" id="cardAmount">₹0</div>
 
-        <input type="hidden" id="category" name="category" required>
+                <div class="card-divider"></div>
 
-        <input type="text" id="customCategory" name="customCategory"
-               placeholder="Enter custom category name">
-    </div>
+                <div class="card-date" id="cardDate">Today</div>
 
-    <!-- Description -->
-    <div class="form-field">
-        <label for="description">
-            Notes <span class="optional-tag">Optional</span>
-        </label>
-        <textarea id="description" name="description"
-                  placeholder="Any details you want to remember..."></textarea>
-    </div>
+                <div class="card-note-display" id="cardNoteDisplay" hidden></div>
 
-    <!-- Receipt upload -->
-    <div class="form-field">
-        <label>
-            Receipt <span class="optional-tag">Optional</span>
-        </label>
+                <div class="card-footer">
+                    <div class="card-confidence" id="cardConfidence">
+                        <span class="confidence-dot"></span>
+                        <span class="confidence-text">High confidence</span>
+                    </div>
+                </div>
 
-        <label for="photo" class="file-drop">
-            <div class="file-drop-content">
-                <span class="file-drop-text" id="fileDropText">
-                    Click to upload a receipt photo
-                </span>
-                <span class="file-drop-hint">PNG or JPG, up to 10 MB</span>
+                <div class="card-actions">
+                    <button type="button" class="card-btn card-btn-primary" id="cardSaveBtn">
+                        Save
+                    </button>
+                    <button type="button" class="card-btn card-btn-ghost" id="cardEditBtn">
+                        Edit
+                    </button>
+                    <button type="button" class="card-btn card-btn-ghost" id="cardNoteBtn">
+                        + Add note
+                    </button>
+                </div>
+
             </div>
-        </label>
-        <input type="file" id="photo" name="photo" accept="image/*" hidden>
+
+            <!-- ── EDIT VIEW (hidden until Edit clicked) ────── -->
+            <div class="write-card-edit" id="writeCardEdit" hidden>
+
+                <div class="edit-field">
+                    <label class="edit-label" for="editBusiness">Merchant</label>
+                    <input type="text" id="editBusiness" class="edit-input" maxlength="200">
+                </div>
+
+                <div class="edit-row">
+                    <div class="edit-field">
+                        <label class="edit-label" for="editAmount">Amount</label>
+                        <div class="edit-amount-wrap">
+                            <span class="edit-amount-prefix">₹</span>
+                            <input type="number" id="editAmount" class="edit-input edit-input-amount" step="0.01"
+                                min="0.01" max="10000000">
+                        </div>
+                    </div>
+                    <div class="edit-field">
+                        <label class="edit-label" for="editDate">Date</label>
+                        <input type="date" id="editDate" class="edit-input">
+                    </div>
+                </div>
+
+                <div class="edit-field">
+                    <label class="edit-label" for="editCategory">Category</label>
+                    <select id="editCategory" class="edit-input edit-select">
+                        <option value="Groceries">Groceries</option>
+                        <option value="Restaurants">Restaurants</option>
+                        <option value="Gas/Car">Gas / Car</option>
+                        <option value="Clothes">Clothes</option>
+                        <option value="Furniture/Home">Furniture / Home</option>
+                        <option value="School/Office Supplies">School / Office</option>
+                        <option value="Misc">Misc</option>
+                    </select>
+                </div>
+
+                <div class="edit-field">
+                    <label class="edit-label" for="editNote">Note (optional)</label>
+                    <textarea id="editNote" class="edit-input edit-textarea" rows="2" maxlength="500"></textarea>
+                </div>
+
+                <!--
+                    Receipt attachment area — inside edit view only.
+                    Users can also drop images anywhere on the page
+                    which will also populate this.
+                -->
+                <div class="edit-field">
+                    <label class="edit-label">Attach receipt <span class="edit-optional">(coming soon)</span></label>
+                    <label for="editReceipt" class="edit-attach">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                        </svg>
+                        <span id="editAttachLabel">Click to upload</span>
+                    </label>
+                    <input type="file" id="editReceipt" accept="image/jpeg,image/png,image/webp" hidden>
+                </div>
+
+                <div class="card-divider"></div>
+
+                <div class="card-actions">
+                    <button type="button" class="card-btn card-btn-primary" id="editSaveBtn">
+                        Save changes
+                    </button>
+                    <button type="button" class="card-btn card-btn-ghost" id="editCancelBtn">
+                        Clear
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+
+    <!--
+        ═════════════════════════════════════════════════════════
+        THE CONFIRMATION FLASH — Post-save moment
+        ═════════════════════════════════════════════════════════
+
+        After Save, the receipt card animates away, and briefly
+        this checkmark appears in its place. Purely visual — no
+        text, no toast. The animation IS the confirmation.
+    -->
+    <div class="write-checkmark" id="writeCheckmark" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
     </div>
 
-    <button type="submit" class="btn-primary">Add Expense</button>
-</form>
 
-<!-- Toast notification -->
-<div id="toast" class="toast"></div>
+    <!--
+        Quiet post-save text. Appears below input for ~3 seconds.
+        Confirmation without interruption.
+    -->
+    <div class="write-just-saved" id="writeJustSaved" hidden></div>
+
+
+    <!--
+        ═════════════════════════════════════════════════════════
+        FLOW MODE — Recent merchants quick-pick
+        ═════════════════════════════════════════════════════════
+
+        Only appears after user saves 2+ expenses within 90s.
+        Shows their most recent merchants as clickable pills.
+        Clicking one pre-fills the input.
+    -->
+    <div class="write-flow" id="writeFlow" hidden>
+        <span class="flow-label">Recent</span>
+        <div class="flow-pills" id="flowPills"></div>
+    </div>
+
+
+    <!--
+        ═════════════════════════════════════════════════════════
+        CONTEXTUAL FOOTER
+        ═════════════════════════════════════════════════════════
+
+        Always present. Updates based on state:
+          - Empty:   "Start today's ledger."
+          - 1-5:     "You've logged X expenses today · ₹Y"
+          - 6+:      "You're on fire today. X expenses."
+          - Just saved: "Last: Zomato · just now" (for 60s)
+    -->
+    <div class="write-context" id="writeContext">
+        <div class="write-context-divider"></div>
+        <p class="write-context-text" id="writeContextText">
+            Loading today's ledger...
+        </p>
+        <p class="write-context-hint">
+            drop a receipt anywhere on this page
+        </p>
+    </div>
+
+
+</div>
+
+
+<!--
+    ═════════════════════════════════════════════════════════════
+    DRAG & DROP OVERLAY
+    ═════════════════════════════════════════════════════════════
+
+    Full-viewport overlay that appears when user drags a file
+    over the browser window. Purely visual — showcases the
+    upcoming OCR feature. Doesn't actually parse the image.
+
+    Positioned outside .write-page so it can cover the entire
+    viewport regardless of scroll.
+-->
+<div class="write-drop-overlay" id="writeDropOverlay" hidden>
+    <div class="drop-overlay-inner">
+        <div class="drop-overlay-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+        </div>
+        <p class="drop-overlay-title">Drop your receipt here</p>
+        <p class="drop-overlay-sub">Receipt scanning is coming soon</p>
+    </div>
+</div>
+
+
+<!--
+    Toast is kept for legacy compatibility — but the Write page
+    prefers the inline "just saved" text over toasts.
+    Toast may still fire for errors.
+-->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
 {% endblock %}

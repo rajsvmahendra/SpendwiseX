@@ -1,65 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="description" content="SpendWise — Your intelligent financial diary.
+                   Track expenses, understand your spending,
+                   and build better financial habits with your
+                   AI companion.">
+    <meta name="theme-color" content="#1a1614">
+
     <title>{% block title %}SpendWise{% endblock %}</title>
 
-    <!-- Google Font -->
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}" type="image/x-icon">
+
+    <!--
+        Typography System
+        ─────────────────
+        DM Sans        — Primary UI font. Geometric, modern, friendly.
+                         NOT Inter (overused). Slightly warmer personality.
+        Caveat          — Handwritten font for diary headings and
+                         the journal page. Elegant, not childish.
+                         Looks like actual fountain pen writing.
+        Playfair Display — Sophisticated serif for hero text,
+                          mascot greeting, page titles.
+                          Vintage craftsmanship meets modern design.
+        JetBrains Mono  — Financial numbers. Tabular alignment.
+                          Premium monospace.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap"
+        rel="stylesheet">
 
-    <!-- Favicon -->
-    <link rel="icon"
-          href="{{ url_for('static', filename='images/favicon.ico') }}"
-          type="image/x-icon">
-
-    <!-- Main Styles -->
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
     {% block extra_css %}{% endblock %}
+
 </head>
 
 <body>
 
-    <header>
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='images/logo.png') }}"
-                 alt="SpendWise Logo"
-                 class="logo">
-            <div class="brand">
-                <h1>SpendWise</h1>
-                <p>Track Smarter. Spend Better.</p>
-            </div>
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  MASCOT WELCOME OVERLAY                              ║
+        ╚══════════════════════════════════════════════════════╝
+
+        Full-screen overlay that plays on first visit.
+
+        Animation sequence (controlled by JS):
+        1. Screen dims (overlay fades in)
+        2. Ambient glow orb pulses
+        3. Orb morphs → mascot image appears
+        4. Mascot rotates 360° while floating
+        5. Particle effects around mascot
+        6. Speech bubble appears with greeting
+        7. After 5-7 seconds, overlay fades out
+        8. Mascot shrinks → docks into navbar
+
+        sessionStorage tracks if animation has played this session.
+        On subsequent page loads within same session, overlay is skipped.
+        Mascot goes directly to navbar docked state.
+    -->
+    <div id="mascotOverlay" class="mascot-overlay">
+
+        <!-- Ambient glow behind mascot -->
+        <div class="mascot-glow"></div>
+
+        <!-- Floating particles -->
+        <div class="mascot-particles" id="mascotParticles"></div>
+
+        <!-- Mascot character -->
+        <div class="mascot-character" id="mascotCharacter">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SpendWise AI Companion"
+                class="mascot-image" id="mascotImage">
         </div>
 
-        <nav>
-            <a href="{{ url_for('home') }}">Dashboard</a>
-            <a href="{{ url_for('add_page') }}">Add Expense</a>
-            <a href="{{ url_for('monthly_page') }}">Analytics</a>
-            <a href="{{ url_for('recent_page') }}">Transactions</a>
+        <!-- Greeting speech bubble -->
+        <div class="mascot-bubble" id="mascotBubble">
+            <p class="mascot-greeting" id="mascotGreeting"></p>
+            <p class="mascot-subtext" id="mascotSubtext"></p>
+        </div>
+
+    </div>
+
+
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  HEADER / NAVIGATION                                 ║
+        ╚══════════════════════════════════════════════════════╝
+
+        The navbar has a warm dark tone, not cold grey.
+        Logo is prominent — not tiny.
+        Mascot docks into the right side after welcome animation.
+
+        The docked mascot:
+          - Floats gently (CSS animation)
+          - Glows subtly on hover
+          - Click → opens assistant panel with tips/reactions
+          - Reacts to user actions (achievement, anomaly, etc.)
+    -->
+    <header>
+        <a href="{{ url_for('home') }}" class="logo-link">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="SpendWise" class="logo" width="44"
+                height="44">
+            <div class="brand">
+                <h1>SpendWise</h1>
+                <p>Your Financial Diary</p>
+            </div>
+        </a>
+
+        <nav aria-label="Main navigation">
+            <a href="{{ url_for('home') }}" class="nav-link" data-page="dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" />
+                    <rect x="14" y="3" width="7" height="7" />
+                    <rect x="3" y="14" width="7" height="7" />
+                    <rect x="14" y="14" width="7" height="7" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="{{ url_for('add_page') }}" class="nav-link" data-page="add">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Write
+            </a>
+            <a href="{{ url_for('monthly_page') }}" class="nav-link" data-page="analytics">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+                Insights
+            </a>
+            <a href="{{ url_for('recent_page') }}" class="nav-link" data-page="transactions">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                Ledger
+            </a>
+
+            <!--
+                Docked Mascot — appears after welcome animation.
+                Initially hidden. JS adds "docked" class after
+                the overlay animation completes.
+            -->
+            <div class="nav-mascot" id="navMascot" title="Click for tips">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="AI Companion"
+                    class="nav-mascot-img">
+                <span class="nav-mascot-glow"></span>
+            </div>
         </nav>
     </header>
 
+
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  MASCOT ASSISTANT PANEL                              ║
+        ╚══════════════════════════════════════════════════════╝
+
+        Slide-in panel that opens when user clicks the docked mascot.
+        Shows: current greeting, tips, reactions, recent insights.
+        Closes on click outside or Escape key.
+    -->
+    <div class="assistant-panel" id="assistantPanel">
+        <div class="assistant-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="" class="assistant-avatar">
+            <div>
+                <div class="assistant-name">SpendWise AI</div>
+                <div class="assistant-status">Always watching your wallet</div>
+            </div>
+            <button class="assistant-close" id="assistantClose" aria-label="Close assistant">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="assistant-messages" id="assistantMessages">
+            <!-- Messages populated by JS based on current insights -->
+        </div>
+    </div>
+
+
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  MAIN CONTENT                                        ║
+        ╚══════════════════════════════════════════════════════╝
+    -->
     <main>
         {% block content %}{% endblock %}
     </main>
 
+
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  FOOTER                                              ║
+        ╚══════════════════════════════════════════════════════╝
+    -->
     <footer>
-        <p>&copy; 2026 SpendWise · Personal Expense Manager</p>
+        <p>&copy; 2026 SpendWise &middot; Your Intelligent Financial Diary</p>
     </footer>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 
-    <!-- Main JavaScript -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!--
+        ╔══════════════════════════════════════════════════════╗
+        ║  SCRIPTS                                             ║
+        ╚══════════════════════════════════════════════════════╝
+    -->
 
+    <!-- Alpine.js — reactive UI -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer>
+    </script>
+
+    <!-- GSAP — professional animations -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+    <!-- Main application script -->
+    <script src="{{ url_for('static', filename='script.js') }}" defer>
+    </script>
+
+    <script src="{{ url_for('static', filename='constellation.js') }}" defer>
+    </script>
+
+    <!-- Page-specific scripts (Chart.js on dashboard + analytics) -->
     {% block extra_js %}{% endblock %}
 
 </body>
+
 </html>
