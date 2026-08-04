@@ -23,8 +23,6 @@
 
 <br />
 
-[**Live Demo**](#) · [**Documentation**](#) · [**Report Bug**](https://github.com/rajsvmahendra/SpendWise/issues) · [**Request Feature**](https://github.com/rajsvmahendra/SpendWise/issues)
-
 </div>
 
 <br />
