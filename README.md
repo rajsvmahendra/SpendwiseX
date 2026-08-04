@@ -21,8 +21,6 @@
 [![GitHub Issues](https://img.shields.io/github/issues/rajsvmahendra/SpendWise?style=flat-square&color=F59E0B)](https://github.com/rajsvmahendra/SpendWise/issues)
 [![Last Commit](https://img.shields.io/github/last-commit/rajsvmahendra/SpendWise?style=flat-square&color=22D3EE)](https://github.com/rajsvmahendra/SpendWise/commits/main)
 
-<br />
-
 </div>
 
 <br />
